@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="tmi.js"></script>
+
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        overflow: hidden;
+        font-family: "Cinzel", "Trajan Pro", serif;
+      }
+
+      #overlay {
+        position: fixed;
+        top: 50%;
+        left: 0;
+        width: 100%;
+        transform: translateY(-50%);
+        display: flex;
+        justify-content: center;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.8s ease;
+      }
+
+      #bar {
+        position: relative;
+        width: 100%;
+        background: rgba(0, 0, 0, 1);
+        padding: 20px 0;
+        text-align: center;
+        border-top: 3px solid #300;
+        border-bottom: 3px solid #300;
+        box-shadow: 0 0 40px rgba(0, 0, 0, 1);
+      }
+      #bar::before {
+        content: "";
+        position: absolute;
+        top: -40px;
+        left: 0;
+        width: 100%;
+        height: 40px;
+        background: linear-gradient(to top, rgba(0, 0, 0, 1), transparent);
+      }
+      #bar::after {
+        content: "";
+        position: absolute;
+        bottom: -40px;
+        left: 0;
+        width: 100%;
+        height: 40px;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 1), transparent);
+      }
+      #text {
+        color: #b00000;
+        font-size: 96px;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        text-shadow: 0 0 15px black;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="overlay">
+      <div id="bar">
+        <span id="text">YOU DIED</span>
+      </div>
+    </div>
+
+    <audio id="sound" src="died.mp3"></audio>
+
+    <script>
+      const CHANNEL = "YA TWITCH HERE"; // change this for your twitch account
+      const COOLDOWN = 5 * 60 * 1000; // 5 min CD - change this for whatever you want
+      let lastTrigger = 0;
+
+      const client = new tmi.Client({
+        connection: { secure: true, reconnect: true },
+        channels: [CHANNEL],
+      });
+
+      client.connect();
+
+      client.on("message", (channel, tags, message, self) => {
+        if (self) return;
+
+        if (!message.toLowerCase().startsWith("!ds")) return;
+
+        const isBroadcaster = tags.badges?.broadcaster;
+        const isMod = tags.mod;
+        const isVip = tags.badges?.vip;
+        const isSub = tags.subscriber;
+
+        if (!(isBroadcaster || isMod || isVip || isSub)) return; // only trigger on broadcaster, mod, vip, or sub, delete this line to trigger on all chatters
+
+        const now = Date.now();
+        if (now - lastTrigger < COOLDOWN) return;
+
+        let text = message.substring(3).trim();
+        if (!text) text = "YOU DIED";
+
+        trigger(text.toUpperCase());
+        lastTrigger = now;
+      });
+
+      function trigger(text) {
+        const overlay = document.getElementById("overlay");
+        const label = document.getElementById("text");
+        const sound = document.getElementById("sound");
+
+        label.textContent = text;
+        sound.currentTime = 0;
+        sound.play();
+
+        overlay.style.opacity = "1";
+
+        setTimeout(() => {
+          overlay.style.opacity = "0";
+        }, 3500);
+      }
+    </script>
+  </body>
+</html>
